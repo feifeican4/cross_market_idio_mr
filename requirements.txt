@@ -1,0 +1,12 @@
+ccxt
+matplotlib
+numpy
+pandas
+pyarrow
+pyyaml
+scipy
+seaborn
+statsmodels
+tqdm
+yfinance
+

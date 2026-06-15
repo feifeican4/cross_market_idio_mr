@@ -1,0 +1,246 @@
+settings:
+  start_date: "2023-01-01"
+  end_date: "2026-05-31"
+  regression_window: 90
+  zscore_window: 60
+  entry_z: 2.0
+  exit_z: 0.5
+  target_pair_vol: 0.10
+  capital_per_signal: 0.02
+  max_single_weight: 0.03
+  max_group_weight: 0.15
+  max_gross_leverage: 3.0
+  max_factor_weight: 0.05
+  calendar_ffill_limit: 3
+  fee_bps_by_kind:
+    equity: 10.0
+    crypto_spot: 10.0
+    crypto_perp: 4.0
+  slippage_bps_by_kind:
+    equity: 5.0
+    crypto_spot: 5.0
+    crypto_perp: 3.0
+  annual_borrow_rate: 0.03
+  annual_funding_rate: 0.05
+
+instruments:
+  BTC:
+    ticker: "BTC/USDT"
+    source: "binance"
+    market_type: "spot"
+    kind: "crypto_spot"
+    group: "benchmark_crypto"
+    role: "benchmark"
+    factors: []
+  ETH:
+    ticker: "ETH/USDT"
+    source: "binance"
+    market_type: "spot"
+    kind: "crypto_spot"
+    group: "benchmark_crypto"
+    role: "benchmark"
+    factors: []
+  SPY:
+    ticker: "SPY"
+    source: "yfinance"
+    market_type: "spot"
+    kind: "equity"
+    group: "benchmark_equity"
+    role: "benchmark"
+    factors: []
+  QQQ:
+    ticker: "QQQ"
+    source: "yfinance"
+    market_type: "spot"
+    kind: "equity"
+    group: "benchmark_equity"
+    role: "benchmark"
+    factors: []
+  SMH:
+    ticker: "SMH"
+    source: "yfinance"
+    market_type: "spot"
+    kind: "equity"
+    group: "benchmark_equity"
+    role: "benchmark"
+    factors: []
+
+  MSTR:
+    ticker: "MSTR"
+    source: "yfinance"
+    market_type: "spot"
+    kind: "equity"
+    group: "crypto_equity"
+    role: "target"
+    factors: ["BTC", "SPY"]
+  COIN:
+    ticker: "COIN"
+    source: "yfinance"
+    market_type: "spot"
+    kind: "equity"
+    group: "crypto_equity"
+    role: "target"
+    factors: ["BTC", "QQQ"]
+  MARA:
+    ticker: "MARA"
+    source: "yfinance"
+    market_type: "spot"
+    kind: "equity"
+    group: "miner"
+    role: "target"
+    factors: ["BTC", "SMH"]
+  RIOT:
+    ticker: "RIOT"
+    source: "yfinance"
+    market_type: "spot"
+    kind: "equity"
+    group: "miner"
+    role: "target"
+    factors: ["BTC", "SMH"]
+  CLSK:
+    ticker: "CLSK"
+    source: "yfinance"
+    market_type: "spot"
+    kind: "equity"
+    group: "miner"
+    role: "target"
+    factors: ["BTC", "SMH"]
+  HOOD:
+    ticker: "HOOD"
+    source: "yfinance"
+    market_type: "spot"
+    kind: "equity"
+    group: "crypto_equity"
+    role: "target"
+    factors: ["BTC", "QQQ"]
+  SQ:
+    ticker: "SQ"
+    source: "yfinance"
+    market_type: "spot"
+    kind: "equity"
+    group: "crypto_equity"
+    role: "target"
+    factors: ["BTC", "QQQ"]
+
+  SOL:
+    ticker: "SOL-USD"
+    source: "yfinance"
+    market_type: "spot"
+    kind: "crypto_spot"
+    group: "l1"
+    role: "target"
+    factors: ["BTC"]
+  BNB:
+    ticker: "BNB-USD"
+    source: "yfinance"
+    market_type: "spot"
+    kind: "crypto_spot"
+    group: "l1"
+    role: "target"
+    factors: ["BTC"]
+  ADA:
+    ticker: "ADA-USD"
+    source: "yfinance"
+    market_type: "spot"
+    kind: "crypto_spot"
+    group: "l1"
+    role: "target"
+    factors: ["BTC"]
+  XRP:
+    ticker: "XRP-USD"
+    source: "yfinance"
+    market_type: "spot"
+    kind: "crypto_spot"
+    group: "l1"
+    role: "target"
+    factors: ["BTC"]
+  DOGE:
+    ticker: "DOGE-USD"
+    source: "yfinance"
+    market_type: "spot"
+    kind: "crypto_spot"
+    group: "meme"
+    role: "target"
+    factors: ["BTC"]
+  AVAX:
+    ticker: "AVAX-USD"
+    source: "yfinance"
+    market_type: "spot"
+    kind: "crypto_spot"
+    group: "l1"
+    role: "target"
+    factors: ["BTC"]
+  LINK:
+    ticker: "LINK-USD"
+    source: "yfinance"
+    market_type: "spot"
+    kind: "crypto_spot"
+    group: "infra"
+    role: "target"
+    factors: ["BTC", "ETH"]
+  LTC:
+    ticker: "LTC-USD"
+    source: "yfinance"
+    market_type: "spot"
+    kind: "crypto_spot"
+    group: "l1"
+    role: "target"
+    factors: ["BTC"]
+  BCH:
+    ticker: "BCH-USD"
+    source: "yfinance"
+    market_type: "spot"
+    kind: "crypto_spot"
+    group: "l1"
+    role: "target"
+    factors: ["BTC"]
+  DOT:
+    ticker: "DOT-USD"
+    source: "yfinance"
+    market_type: "spot"
+    kind: "crypto_spot"
+    group: "l1"
+    role: "target"
+    factors: ["BTC"]
+  AAVE:
+    ticker: "AAVE-USD"
+    source: "yfinance"
+    market_type: "spot"
+    kind: "crypto_spot"
+    group: "defi"
+    role: "target"
+    factors: ["ETH", "BTC"]
+
+  NVDA:
+    ticker: "NVDA"
+    source: "yfinance"
+    market_type: "spot"
+    kind: "equity"
+    group: "tech"
+    role: "target"
+    factors: ["QQQ", "SMH"]
+  TSLA:
+    ticker: "TSLA"
+    source: "yfinance"
+    market_type: "spot"
+    kind: "equity"
+    group: "tech"
+    role: "target"
+    factors: ["QQQ"]
+  AMD:
+    ticker: "AMD"
+    source: "yfinance"
+    market_type: "spot"
+    kind: "equity"
+    group: "tech"
+    role: "target"
+    factors: ["QQQ", "SMH"]
+  META:
+    ticker: "META"
+    source: "yfinance"
+    market_type: "spot"
+    kind: "equity"
+    group: "tech"
+    role: "target"
+    factors: ["QQQ"]
+
