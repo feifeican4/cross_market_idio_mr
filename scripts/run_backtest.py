@@ -8,9 +8,11 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 import pandas as pd
 
 from cross_market_mr.analysis import capacity_analysis, cost_sensitivity, parameter_sensitivity
+from cross_market_mr.bonus import run_bonus_suite
 from cross_market_mr.config import load_config
 from cross_market_mr.pipeline import run_strategy
-from cross_market_mr.report import append_analysis_tables, generate_report
+from cross_market_mr.report import append_analysis_tables, append_bonus_report, generate_report
+from make_pdf_report import write_pdf_report
 
 
 def _series_map_from_prices(prices: pd.DataFrame) -> dict[str, pd.Series]:
@@ -53,8 +55,14 @@ def main() -> None:
     capacity.to_csv(output_dir / "capacity_analysis.csv")
     append_analysis_tables(report_path, sensitivity, cost, capacity)
 
+    bonus = run_bonus_suite(result, config, target_asset="MSTR", basis_reference="BTC")
+    bonus.save(output_dir)
+    append_bonus_report(report_path, bonus)
+    pdf_path = write_pdf_report(output_dir)
+
     print("Backtest completed.")
     print(f"Report: {report_path}")
+    print(f"PDF Report: {pdf_path}")
 
 
 if __name__ == "__main__":

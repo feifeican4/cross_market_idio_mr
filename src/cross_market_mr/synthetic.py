@@ -79,10 +79,17 @@ def generate_synthetic_dataset(
         "BCH": {"BTC": 0.82},
         "DOT": {"BTC": 0.88},
         "AAVE": {"BTC": 0.65, "ETH": 0.35},
+        "ARB": {"BTC": 0.55, "ETH": 0.55},
+        "OP": {"BTC": 0.50, "ETH": 0.60},
+        "UNI": {"BTC": 0.55, "ETH": 0.45},
         "NVDA": {"QQQ": 1.20, "SMH": 0.60},
         "TSLA": {"QQQ": 1.10},
         "AMD": {"QQQ": 0.95, "SMH": 0.70},
         "META": {"QQQ": 1.00},
+        "MSFT": {"QQQ": 0.95},
+        "AAPL": {"QQQ": 0.90},
+        "GOOGL": {"QQQ": 0.95},
+        "AMZN": {"QQQ": 1.05},
     }
 
     for symbol in config.target_symbols:
@@ -113,3 +120,77 @@ def generate_synthetic_dataset(
         target_returns=target_return_frame,
     )
 
+
+def generate_synthetic_intraday_dataset(
+    config: StrategyConfig,
+    seed: int = 17,
+    freq: str = "4h",
+) -> SyntheticDataset:
+    """Generate a 1-4 hour synthetic dataset for the intraday bonus path."""
+    rng = np.random.default_rng(seed)
+    index = pd.date_range(
+        config.settings.start_date,
+        config.settings.end_date,
+        freq=freq,
+        inclusive="left",
+    )
+    scale = np.sqrt(1 / 6)
+
+    btc = pd.Series(0.00003 + 0.030 * scale * rng.standard_normal(len(index)), index=index, name="BTC")
+    eth = pd.Series(0.00004 + 0.025 * scale * rng.standard_normal(len(index)) + 0.65 * btc.values,
+                    index=index, name="ETH")
+    spy = pd.Series(0.00002 + 0.010 * scale * rng.standard_normal(len(index)), index=index, name="SPY")
+    qqq = pd.Series(0.00003 + 0.011 * scale * rng.standard_normal(len(index)) + 0.90 * spy.values,
+                    index=index, name="QQQ")
+    smh = pd.Series(0.00003 + 0.013 * scale * rng.standard_normal(len(index)) + 0.75 * qqq.values,
+                    index=index, name="SMH")
+    factor_returns = pd.concat([btc, eth, spy, qqq, smh], axis=1)
+
+    series_map: dict[str, pd.Series] = {
+        "BTC": _make_price_series(btc),
+        "ETH": _make_price_series(eth),
+        "SPY": _make_price_series(spy),
+        "QQQ": _make_price_series(qqq),
+        "SMH": _make_price_series(smh),
+    }
+    target_returns: dict[str, pd.Series] = {}
+    default_betas = {
+        "crypto_equity": {"BTC": 1.4, "QQQ": 0.4},
+        "miner": {"BTC": 1.3, "SMH": 0.3},
+        "l1": {"BTC": 1.0},
+        "l2": {"ETH": 0.6, "BTC": 0.5},
+        "defi": {"ETH": 0.5, "BTC": 0.5},
+        "infra": {"ETH": 0.3, "BTC": 0.7},
+        "meme": {"BTC": 0.8},
+        "tech": {"QQQ": 1.0, "SMH": 0.4},
+    }
+
+    for symbol in config.target_symbols:
+        instrument = config.instruments[symbol]
+        beta_map = {
+            factor: default_betas.get(instrument.group, {}).get(factor, 0.0)
+            for factor in instrument.factors
+        }
+        residual = np.zeros(len(index))
+        shock_scale = 0.010 * scale if instrument.kind == "crypto_perp" else 0.014 * scale
+        shock = rng.normal(scale=shock_scale, size=len(index))
+        phi = 0.88
+        for i in range(1, len(index)):
+            residual[i] = phi * residual[i - 1] + shock[i]
+
+        factor_component = np.zeros(len(index))
+        for factor_symbol, beta in beta_map.items():
+            if factor_symbol in factor_returns:
+                factor_component += beta * factor_returns[factor_symbol].values
+
+        ret = 0.00001 + factor_component + residual
+        ret_series = pd.Series(ret, index=index, name=symbol)
+        target_returns[symbol] = ret_series
+        series_map[symbol] = _make_price_series(ret_series)
+
+    target_return_frame = pd.concat(target_returns, axis=1).sort_index()
+    return SyntheticDataset(
+        series_map=series_map,
+        factor_returns=factor_returns,
+        target_returns=target_return_frame,
+    )

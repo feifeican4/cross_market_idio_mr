@@ -210,37 +210,92 @@ instruments:
     group: "defi"
     role: "target"
     factors: ["ETH", "BTC"]
+  ARB:
+    ticker: "ARB/USDT"
+    source: "binance"
+    market_type: "spot"
+    kind: "crypto_spot"
+    group: "l2"
+    role: "target"
+    factors: ["ETH", "BTC"]
+  OP:
+    ticker: "OP/USDT"
+    source: "binance"
+    market_type: "spot"
+    kind: "crypto_spot"
+    group: "l2"
+    role: "target"
+    factors: ["ETH", "BTC"]
+  UNI:
+    ticker: "UNI/USDT"
+    source: "binance"
+    market_type: "spot"
+    kind: "crypto_spot"
+    group: "defi"
+    role: "target"
+    factors: ["ETH", "BTC"]
 
   NVDA:
     ticker: "NVDA"
     source: "yfinance"
-    market_type: "spot"
-    kind: "equity"
+    market_type: "perp_proxy"
+    kind: "crypto_perp"
     group: "tech"
     role: "target"
     factors: ["QQQ", "SMH"]
   TSLA:
     ticker: "TSLA"
     source: "yfinance"
-    market_type: "spot"
-    kind: "equity"
+    market_type: "perp_proxy"
+    kind: "crypto_perp"
     group: "tech"
     role: "target"
     factors: ["QQQ"]
   AMD:
     ticker: "AMD"
     source: "yfinance"
-    market_type: "spot"
-    kind: "equity"
+    market_type: "perp_proxy"
+    kind: "crypto_perp"
     group: "tech"
     role: "target"
     factors: ["QQQ", "SMH"]
   META:
     ticker: "META"
     source: "yfinance"
-    market_type: "spot"
-    kind: "equity"
+    market_type: "perp_proxy"
+    kind: "crypto_perp"
     group: "tech"
     role: "target"
     factors: ["QQQ"]
-
+  MSFT:
+    ticker: "MSFT"
+    source: "yfinance"
+    market_type: "perp_proxy"
+    kind: "crypto_perp"
+    group: "tech"
+    role: "target"
+    factors: ["QQQ"]
+  AAPL:
+    ticker: "AAPL"
+    source: "yfinance"
+    market_type: "perp_proxy"
+    kind: "crypto_perp"
+    group: "tech"
+    role: "target"
+    factors: ["QQQ"]
+  GOOGL:
+    ticker: "GOOGL"
+    source: "yfinance"
+    market_type: "perp_proxy"
+    kind: "crypto_perp"
+    group: "tech"
+    role: "target"
+    factors: ["QQQ"]
+  AMZN:
+    ticker: "AMZN"
+    source: "yfinance"
+    market_type: "perp_proxy"
+    kind: "crypto_perp"
+    group: "tech"
+    role: "target"
+    factors: ["QQQ"]

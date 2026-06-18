@@ -11,35 +11,22 @@ from dataclasses import replace
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 
 from cross_market_mr.analysis import capacity_analysis, cost_sensitivity, parameter_sensitivity
+from cross_market_mr.bonus import run_bonus_suite
 from cross_market_mr.config import StrategyConfig, load_config
 from cross_market_mr.pipeline import run_strategy
-from cross_market_mr.report import append_analysis_tables, generate_report
+from cross_market_mr.report import append_analysis_tables, append_bonus_report, generate_report
 from cross_market_mr.synthetic import generate_synthetic_dataset
+from make_pdf_report import write_pdf_report
 
 
 def _build_demo_config() -> StrategyConfig:
     base = load_config("configs/universe.yaml")
-    demo_instruments = {
-        symbol: base.instruments[symbol]
-        for symbol in [
-            "BTC",
-            "ETH",
-            "SPY",
-            "QQQ",
-            "SMH",
-            "MSTR",
-            "COIN",
-            "SOL",
-            "AAVE",
-            "NVDA",
-        ]
-    }
     demo_settings = replace(
         base.settings,
-        start_date="2024-01-01",
+        start_date="2023-01-01",
         end_date="2024-12-31",
     )
-    return StrategyConfig(settings=demo_settings, instruments=demo_instruments)
+    return StrategyConfig(settings=demo_settings, instruments=base.instruments)
 
 
 def main() -> None:
@@ -73,8 +60,14 @@ def main() -> None:
     capacity.to_csv(output_dir / "capacity_analysis.csv")
     append_analysis_tables(report_path, sensitivity, cost, capacity)
 
+    bonus = run_bonus_suite(result, config, target_asset="MSTR", basis_reference="BTC")
+    bonus.save(output_dir)
+    append_bonus_report(report_path, bonus)
+    pdf_path = write_pdf_report(output_dir)
+
     print("Demo completed.")
     print(f"Report: {output_dir / 'strategy_report.md'}")
+    print(f"PDF Report: {pdf_path}")
     print("Summary:")
     for key, value in result.summary.items():
         print(f"  {key}: {value:.6f}" if isinstance(value, float) else f"  {key}: {value}")

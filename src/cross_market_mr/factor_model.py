@@ -4,8 +4,8 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
+import numpy as np
 import pandas as pd
-import statsmodels.api as sm
 from statsmodels.tsa.stattools import adfuller
 
 
@@ -44,25 +44,35 @@ def fit_rolling_factor_model(
     beta_columns = ["const"] + list(factor_returns.columns)
     betas = pd.DataFrame(index=joined.index, columns=beta_columns, dtype=float)
 
+    factor_columns = list(factor_returns.columns)
+    values = joined[["asset", *factor_columns]].to_numpy(dtype=float)
+
     for pos in range(window, len(joined)):
-        train = joined.iloc[pos - window:pos].dropna()
+        train_values = values[pos - window:pos]
+        train = pd.DataFrame(train_values, columns=["asset", *factor_columns]).dropna()
         if len(train) < min_obs:
             continue
 
-        y_train = train["asset"]
-        x_train = sm.add_constant(train.drop(columns=["asset"]), has_constant="add")
-        fit = sm.OLS(y_train, x_train).fit()
+        y_train = train["asset"].to_numpy(dtype=float)
+        x_raw = train[factor_columns].to_numpy(dtype=float)
+        x_train = np.column_stack([np.ones(len(x_raw)), x_raw])
+        params, *_ = np.linalg.lstsq(x_train, y_train, rcond=None)
 
-        current = joined.iloc[[pos]]
-        x_current = sm.add_constant(current.drop(columns=["asset"]), has_constant="add")
-        pred = float(fit.predict(x_current).iloc[0])
+        current_values = values[pos]
+        x_current = np.array([1.0, *current_values[1:]], dtype=float)
+        pred = float(x_current @ params)
+
+        fitted = x_train @ params
+        resid_train = y_train - fitted
+        ss_res = float(np.sum(resid_train ** 2))
+        ss_tot = float(np.sum((y_train - y_train.mean()) ** 2))
+        current_r2 = 1.0 - ss_res / ss_tot if ss_tot > 0 else float("nan")
 
         predictions.iloc[pos] = pred
-        residuals.iloc[pos] = float(current["asset"].iloc[0] - pred)
-        r2.iloc[pos] = float(fit.rsquared)
-        nobs.iloc[pos] = float(fit.nobs)
-        for column in beta_columns:
-            betas.loc[joined.index[pos], column] = float(fit.params.get(column, float("nan")))
+        residuals.iloc[pos] = float(current_values[0] - pred)
+        r2.iloc[pos] = current_r2
+        nobs.iloc[pos] = float(len(y_train))
+        betas.iloc[pos, :] = params
 
     return RollingFactorModelResult(
         residuals=residuals,
@@ -93,4 +103,3 @@ def model_diagnostics(model: RollingFactorModelResult) -> dict[str, float]:
         "adf_p_value": adf["p_value"],
         "residual_obs": adf["nobs"],
     }
-
