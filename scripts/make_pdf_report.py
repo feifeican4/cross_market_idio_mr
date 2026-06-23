@@ -325,16 +325,15 @@ def plot_exposure_activity(pdf: PdfPages, tables: dict[str, pd.DataFrame], page:
     plt.close(fig)
 
 
-def plot_sensitivity_capacity(pdf: PdfPages, tables: dict[str, pd.DataFrame], page: int) -> None:
+def plot_sensitivity_cost(pdf: PdfPages, tables: dict[str, pd.DataFrame], page: int) -> None:
     parameter = tables["parameter"]
     cost = tables["cost"]
-    capacity = tables["capacity"].dropna(subset=["capacity_usd_proxy"]).sort_values("capacity_usd_proxy").head(10)
-    fig, axes = plt.subplots(3, 1, figsize=A4, constrained_layout=True)
-    fig.suptitle("8. 敏感性与容量", fontsize=17, weight="bold", x=0.08, ha="left", color="black")
+    fig, axes = plt.subplots(2, 1, figsize=A4, constrained_layout=True)
+    fig.suptitle("8. 参数与成本敏感性", fontsize=17, weight="bold", x=0.08, ha="left", color="black")
     if not parameter.empty:
         labels = parameter.apply(lambda r: f"z={r['entry_z']},w={int(r['regression_window'])}", axis=1)
         axes[0].bar(labels, parameter["sharpe"], color="black", alpha=0.8)
-        axes[0].tick_params(axis="x", rotation=20)
+        axes[0].tick_params(axis="x", rotation=28, labelsize=7)
     axes[0].set_title("参数敏感性：不同参数下 Sharpe")
     axes[0].grid(True, axis="y", alpha=0.25)
     if not cost.empty:
@@ -344,11 +343,21 @@ def plot_sensitivity_capacity(pdf: PdfPages, tables: dict[str, pd.DataFrame], pa
     axes[1].set_title("成本敏感性")
     axes[1].grid(True, alpha=0.25)
     axes[1].set_xlabel("cost multiplier")
+    _page_number(fig, page)
+    pdf.savefig(fig, bbox_inches="tight")
+    plt.close(fig)
+
+
+def plot_capacity(pdf: PdfPages, tables: dict[str, pd.DataFrame], page: int) -> None:
+    capacity = tables["capacity"].dropna(subset=["capacity_usd_proxy"]).sort_values("capacity_usd_proxy").head(18)
+    fig, ax = plt.subplots(figsize=A4, constrained_layout=True)
+    fig.suptitle("9. 容量压力测试", fontsize=17, weight="bold", x=0.08, ha="left", color="black")
     if not capacity.empty:
-        axes[2].barh(capacity["symbol"], capacity["capacity_usd_proxy"] / 1_000_000, color="black", alpha=0.8)
-        axes[2].invert_yaxis()
-    axes[2].set_title("容量代理值，百万美元")
-    axes[2].grid(True, axis="x", alpha=0.25)
+        ax.barh(capacity["symbol"], capacity["capacity_usd_proxy"] / 1_000_000, color="black", alpha=0.8)
+        ax.invert_yaxis()
+    ax.set_title("容量代理值，百万美元；基于 ADV 参与率假设")
+    ax.set_xlabel("USD million")
+    ax.grid(True, axis="x", alpha=0.25)
     _page_number(fig, page)
     pdf.savefig(fig, bbox_inches="tight")
     plt.close(fig)
@@ -508,8 +517,11 @@ def write_pdf_report(output_dir: str | Path) -> Path:
         if not tables["factor_exposure"].empty and not tables["diagnostics"].empty:
             plot_exposure_activity(pdf, tables, page)
             page += 1
-        if not tables["parameter"].empty or not tables["cost"].empty or not tables["capacity"].empty:
-            plot_sensitivity_capacity(pdf, tables, page)
+        if not tables["parameter"].empty or not tables["cost"].empty:
+            plot_sensitivity_cost(pdf, tables, page)
+            page += 1
+        if not tables["capacity"].empty:
+            plot_capacity(pdf, tables, page)
             page += 1
         plot_bonus_page_one(pdf, tables, page)
         page += 1

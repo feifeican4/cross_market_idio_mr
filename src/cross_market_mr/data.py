@@ -94,7 +94,21 @@ def download_binance_archive_close_series(
     data["open_time"] = pd.to_numeric(data["open_time"], errors="coerce")
     data["close"] = pd.to_numeric(data["close"], errors="coerce")
     data = data.dropna(subset=["open_time", "close"])
-    data["date"] = pd.to_datetime(data["open_time"], unit="ms", utc=True).dt.tz_convert(None)
+    microsecond_rows = data["open_time"] > 10_000_000_000_000
+    dates = pd.Series(pd.NaT, index=data.index, dtype="datetime64[ns]")
+    if microsecond_rows.any():
+        dates.loc[microsecond_rows] = pd.to_datetime(
+            data.loc[microsecond_rows, "open_time"],
+            unit="us",
+            utc=True,
+        ).dt.tz_convert(None)
+    if (~microsecond_rows).any():
+        dates.loc[~microsecond_rows] = pd.to_datetime(
+            data.loc[~microsecond_rows, "open_time"],
+            unit="ms",
+            utc=True,
+        ).dt.tz_convert(None)
+    data["date"] = dates
     series = data.set_index("date")["close"]
     series = series.loc[pd.Timestamp(start_date):pd.Timestamp(end_date)]
     return _normalize_series(series, name or symbol, normalize_dates=normalize_dates)
