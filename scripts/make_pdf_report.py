@@ -58,7 +58,7 @@ def load_outputs(output_dir: Path) -> dict[str, pd.DataFrame]:
         "dynamic_daily": _read_csv(output_dir / "dynamic_daily.csv", parse_dates=["date"], index_col="date"),
         "ml_daily": _read_csv(output_dir / "ml_daily.csv", parse_dates=["date"], index_col="date"),
     }
-    intraday_dir = output_dir.parent / "intraday_demo"
+    intraday_dir = output_dir.parent / "intraday_real"
     tables["intraday"] = _read_csv(
         intraday_dir / "backtest_daily.csv",
         parse_dates=["date"],
@@ -155,7 +155,7 @@ def summary_page(pdf: PdfPages, daily: pd.DataFrame, config, page: int) -> None:
     ax.axis("off")
     left, right = 0.07, 0.93
     ax.text(left, 0.96, "跨市场特质均值回归策略", fontsize=22, weight="bold", transform=ax.transAxes)
-    ax.text(left, 0.915, "回测报告 | 日频主策略 + 4小时频加分项", fontsize=14, weight="bold", transform=ax.transAxes)
+    ax.text(left, 0.915, "回测报告 | 真实日频主策略 + 真实4小时频加分项", fontsize=14, weight="bold", transform=ax.transAxes)
     ax.plot([left, right], [0.89, 0.89], color="black", linewidth=0.8, transform=ax.transAxes)
 
     # Metric panel: a clean 2x2 table with identical left/right margins.
@@ -213,8 +213,8 @@ def data_page(pdf: PdfPages, page: int) -> None:
         "因子与频率\n\n"
         "因子：BTC, ETH, SPY, QQQ, SMH\n\n"
         "主流程：日频 close-to-close\n\n"
-        "加分项：4 小时频 synthetic demo\n\n"
-        "代码：\nconfigs/universe.yaml\nsrc/cross_market_mr/data.py\nsrc/cross_market_mr/synthetic.py"
+        "加分项：Binance 官方历史归档真实 4 小时 K 线实验\n\n"
+        "代码：\nconfigs/universe.yaml\nsrc/cross_market_mr/data.py\nscripts/run_intraday_real.py"
     )
     ax.text(0.05, 0.86, _wrap(left, 36), fontsize=10.8, va="top", linespacing=1.35, transform=ax.transAxes)
     ax.text(0.55, 0.86, _wrap(right, 34), fontsize=10.8, va="top", linespacing=1.35, transform=ax.transAxes)
@@ -329,7 +329,7 @@ def plot_sensitivity_capacity(pdf: PdfPages, tables: dict[str, pd.DataFrame], pa
     parameter = tables["parameter"]
     cost = tables["cost"]
     capacity = tables["capacity"].dropna(subset=["capacity_usd_proxy"]).sort_values("capacity_usd_proxy").head(10)
-    fig, axes = plt.subplots(3, 1, figsize=A4)
+    fig, axes = plt.subplots(3, 1, figsize=A4, constrained_layout=True)
     fig.suptitle("8. 敏感性与容量", fontsize=17, weight="bold", x=0.08, ha="left", color="black")
     if not parameter.empty:
         labels = parameter.apply(lambda r: f"z={r['entry_z']},w={int(r['regression_window'])}", axis=1)
@@ -343,6 +343,7 @@ def plot_sensitivity_capacity(pdf: PdfPages, tables: dict[str, pd.DataFrame], pa
         axes[1].legend(fontsize=8)
     axes[1].set_title("成本敏感性")
     axes[1].grid(True, alpha=0.25)
+    axes[1].set_xlabel("cost multiplier")
     if not capacity.empty:
         axes[2].barh(capacity["symbol"], capacity["capacity_usd_proxy"] / 1_000_000, color="black", alpha=0.8)
         axes[2].invert_yaxis()
@@ -374,20 +375,41 @@ def plot_bonus_page_one(pdf: PdfPages, tables: dict[str, pd.DataFrame], page: in
 
 
 def plot_bonus_page_two(pdf: PdfPages, tables: dict[str, pd.DataFrame], page: int) -> None:
-    fig, axes = plt.subplots(2, 1, figsize=A4)
+    fig, ax = plt.subplots(1, 1, figsize=A4)
     fig.suptitle("10. 加分项曲线（二）", fontsize=17, weight="bold", x=0.08, ha="left", color="black")
-    items = [
-        ("ml_daily", "ML gating 模块"),
-        ("intraday", "4小时频 demo"),
-    ]
-    for ax, (key, title) in zip(axes, items):
-        df = tables.get(key, pd.DataFrame())
-        if not df.empty and "equity_curve" in df:
-            ax.plot(df.index, df["equity_curve"], color="black", linewidth=1.2)
-        ax.set_title(title, pad=8)
+    ml_df = tables.get("ml_daily", pd.DataFrame())
+    if not ml_df.empty and "equity_curve" in ml_df:
+        ax.plot(ml_df.index, ml_df["equity_curve"], color="black", linewidth=1.2, label="ML gating")
+    basis_df = tables.get("basis_daily", pd.DataFrame())
+    if not basis_df.empty and "equity_curve" in basis_df:
+        ax.plot(basis_df.index, basis_df["equity_curve"], color="black", linewidth=1.0, linestyle="--", label="真实 basis")
+    ax.set_title("ML gating 与真实 basis 对比", pad=8)
+    ax.grid(True, alpha=0.25)
+    ax.tick_params(axis="x", labelrotation=20)
+    ax.legend(fontsize=8)
+    fig.subplots_adjust(top=0.90)
+    _page_number(fig, page)
+    pdf.savefig(fig, bbox_inches="tight")
+    plt.close(fig)
+
+
+def plot_intraday_real(pdf: PdfPages, tables: dict[str, pd.DataFrame], page: int) -> None:
+    intraday = tables.get("intraday", pd.DataFrame())
+    fig, axes = plt.subplots(2, 1, figsize=A4, sharex=True, constrained_layout=True)
+    fig.suptitle("10. 真实4小时频加分项", fontsize=17, weight="bold", x=0.08, ha="left", color="black")
+    if not intraday.empty and "equity_curve" in intraday:
+        equity = intraday["equity_curve"]
+        dd = drawdown(equity)
+        axes[0].plot(equity.index, equity, color="black", linewidth=1.2)
+        axes[0].set_title("Binance 真实4小时K线 residual MR 净值")
+        axes[1].fill_between(dd.index, dd.values, 0, color="black", alpha=0.25)
+        axes[1].set_title("真实4小时频回撤")
+        axes[1].yaxis.set_major_formatter(lambda x, _: f"{x:.0%}")
+    else:
+        axes[0].text(0.05, 0.5, "无真实4小时频结果", transform=axes[0].transAxes)
+    for ax in axes:
         ax.grid(True, alpha=0.25)
         ax.tick_params(axis="x", labelrotation=20)
-    fig.subplots_adjust(top=0.90, hspace=0.35)
     _page_number(fig, page)
     pdf.savefig(fig, bbox_inches="tight")
     plt.close(fig)
@@ -449,7 +471,7 @@ def analysis_conclusion_page(pdf: PdfPages, page: int) -> None:
         "2. 因子模型对部分币股解释力较强，但解释力高不等于残差一定会回归。\n"
         "3. ADF 检验在样本内支持部分残差平稳，但样本内平稳不保证未来仍然平稳。\n"
         "4. 成本敏感性显示策略对交易成本很敏感，这类短周期均值回归策略容易被成本吃掉。\n"
-        "5. 加分项中，basis 模块表现相对稳定，但当前是合成 perp 代理，真实结论必须接入真实 Binance basis 和 funding 数据。\n"
+        "5. 加分项中，basis 模块使用 Binance 真实 spot/perp 历史价格；实盘结论还需要接入逐期 funding rate 和成交深度。\n"
         "6. 动态因子和 ML gating 没有扭转主策略亏损，说明更复杂模型不能自动创造 alpha，反而需要更严格防止过拟合。\n\n"
         "结论：研究框架完成；当前简单版本不能证明可实盘盈利。"
     )
@@ -493,6 +515,8 @@ def write_pdf_report(output_dir: str | Path) -> Path:
         page += 1
         plot_bonus_page_two(pdf, tables, page)
         page += 1
+        plot_intraday_real(pdf, tables, page)
+        page += 1
         table_page(pdf, "11.1 加分项策略结果", bonus_strategy_table(tables), page, max_rows=5)
         page += 1
         table_page(pdf, "11.2 ML 分类指标", ml_classifier_table(tables), page, max_rows=3)
@@ -503,7 +527,7 @@ def write_pdf_report(output_dir: str | Path) -> Path:
 
 
 def main() -> None:
-    pdf_path = write_pdf_report(PROJECT_ROOT / "reports" / "demo")
+    pdf_path = write_pdf_report(PROJECT_ROOT / "reports" / "live")
     print(f"PDF report written to {pdf_path}")
 
 

@@ -74,7 +74,11 @@ def run_strategy(
     diagnostics_rows: list[dict[str, float | str | int]] = []
 
     for symbol in config.target_symbols:
+        if symbol not in returns.columns:
+            continue
         factor_symbols = [factor for factor in config.factor_list_for(symbol) if factor in returns.columns]
+        if not factor_symbols:
+            continue
         asset_returns = returns[symbol]
         factor_returns = returns[factor_symbols]
         if asset_returns.dropna().empty or factor_returns.dropna(how="all").empty:

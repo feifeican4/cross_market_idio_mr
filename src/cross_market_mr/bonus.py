@@ -17,6 +17,7 @@ import statsmodels.api as sm
 
 from .backtest import run_backtest
 from .config import StrategyConfig
+from .data import download_binance_archive_close_series
 from .metrics import performance_metrics
 from .portfolio import apply_risk_caps, build_pair_weight_frame
 from .signals import build_hysteresis_signal, rolling_zscore
@@ -510,16 +511,29 @@ def run_bonus_suite(
     signals = getattr(base_result, "signals")
     pair_weights = getattr(base_result, "pair_weights")
 
-    # 1) Cross-market basis arbitrage on a synthetic perp proxy.
-    basis_pair = generate_synthetic_basis_pair(prices[basis_reference], seed=11)
-    basis_daily, basis_summary = run_basis_arbitrage(
-        spot=basis_pair["spot"],
-        perp=basis_pair["perp"],
-        window=max(30, config.settings.zscore_window),
-        entry_z=config.settings.entry_z,
-        exit_z=config.settings.exit_z,
-        notional=config.settings.capital_per_signal,
-    )
+    # 1) Cross-market basis arbitrage on real Binance spot/perp data.
+    basis_daily = pd.DataFrame()
+    basis_summary: dict[str, float] = {}
+    try:
+        basis_spot = prices[basis_reference]
+        basis_perp = download_binance_archive_close_series(
+            f"{basis_reference}/USDT",
+            start_date=str(basis_spot.index.min().date()),
+            end_date=str(basis_spot.index.max().date()),
+            name=f"{basis_reference}_perp",
+            market="um_futures",
+        )
+        basis_daily, basis_summary = run_basis_arbitrage(
+            spot=basis_spot,
+            perp=basis_perp,
+            window=max(30, config.settings.zscore_window),
+            entry_z=config.settings.entry_z,
+            exit_z=config.settings.exit_z,
+            notional=config.settings.capital_per_signal,
+        )
+        basis_summary["basis_source"] = "binance_real"
+    except Exception:
+        basis_summary["basis_source"] = "unavailable"
 
     # 2) Dynamic factor selection on one representative asset.
     candidate_factors = [factor for factor in config.factor_symbols if factor in returns.columns]

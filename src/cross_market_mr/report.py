@@ -104,7 +104,7 @@ def generate_report(result: StrategyRunResult, output_path: str | Path) -> None:
             "2. 回归、z-score 均只使用历史数据，并在交易中 shift 一天，避免前视偏差。",
             "3. 目标资产腿和因子对冲腿同时建仓，目标是控制 BTC、ETH、SPY、QQQ、SMH 等系统风险。",
             "4. 回测按换手计入手续费和滑点，股票空头计入借券成本，perp 腿预留 funding 成本。",
-            "5. demo 结果没有做参数优化；负收益同样是有效研究结果，说明当前设定下 alpha 不足或成本过高。",
+            "5. 当前真实数据回测结果没有做参数美化；负收益同样是有效研究结果，说明当前设定下 alpha 不足或成本过高。",
         ]
     )
 
@@ -155,7 +155,7 @@ def append_analysis_tables(
         [
             "",
             "## 12. 策略局限",
-            "1. yfinance 和合成数据只能用于研究与代码验证，不能替代真实 Binance TradFi perp 历史价格。",
+            "1. 当前报告图表使用真实历史行情生成；但实盘前仍需要进一步接入订单簿、成交深度和真实 funding 明细。",
             "2. funding rate、订单簿深度、真实可成交滑点需要接入交易所历史数据后重新估计。",
             "3. ADF 通过只说明样本内残差更像平稳序列，不保证未来一定均值回归。",
             "4. 线性 beta 在 regime 切换时会失效，特别是危机行情和极端散户情绪行情。",
@@ -173,7 +173,7 @@ def append_bonus_report(report_path: str | Path, bonus_result: object) -> None:
     additions = [
         "",
         "## 13. 加分项 1：跨市场基差套利模块",
-        "这里用现货价格构造合成 perp 代理，展示 spot-perp basis 的研究框架。真实提交时应替换为 Binance 美股/加密 perp 历史价格和 funding rate。",
+        "这里使用 Binance 真实 spot/perp 历史价格展示 spot-perp basis 的研究框架。真实交易前还应进一步接入逐期 funding rate。",
     ]
     basis_summary = getattr(bonus_result, "basis_summary", {})
     for key, value in basis_summary.items():
@@ -220,9 +220,9 @@ def append_bonus_report(report_path: str | Path, bonus_result: object) -> None:
         [
             "",
             "## 16. 总反思",
-            "1. 主策略没有追求漂亮 Sharpe。demo 结果为负，说明框架是诚实研究管线，不是参数美化器。",
+            "1. 主策略没有追求漂亮 Sharpe。真实数据结果偏弱，说明框架是诚实研究管线，不是参数美化器。",
             "2. 最大风险是残差不回归。因子模型只解释线性关系，市场 regime 切换时 beta 和残差分布都会变。",
-            "3. 数据质量是实盘前最大缺口。yfinance、合成 perp 和默认 ADV 只能证明方法，不能证明 Binance 可成交利润。",
+            "3. 数据质量是实盘前最大缺口。公开历史行情可以验证研究流程，但 Binance 可成交利润仍需要订单簿、真实 funding 和成交额数据进一步确认。",
             "4. 动态因子和 ML 是双刃剑。它们提升适应性，但也显著增加过拟合风险，应作为稳健性和研究扩展，而不是收益宣传来源。",
         ]
     )
